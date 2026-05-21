@@ -62,12 +62,14 @@ class HookResolverTest {
             },
         )
 
-        val result = resolver.resolve(
+        val report = resolver.resolveWithReport(
             fingerprint = fingerprint,
             definition = HookDefinition(hookId, minimumScore = 70),
         )
 
-        assertEquals(HookResolveResult.CacheHit(cachedTarget), result)
+        assertEquals(HookResolveResult.CacheHit(cachedTarget), report.result)
+        assertEquals(true, report.cacheHit)
+        assertEquals(0, report.candidates.size)
         assertEquals(false, providerCalled)
     }
 
@@ -108,12 +110,14 @@ class HookResolverTest {
             },
         )
 
-        val result = resolver.resolve(
+        val report = resolver.resolveWithReport(
             fingerprint = fingerprint,
             definition = HookDefinition(hookId, minimumScore = 70),
         )
 
-        assertEquals(HookResolveResult.Scanned(scannedTarget, score = 80), result)
+        assertEquals(HookResolveResult.Scanned(scannedTarget, score = 80), report.result)
+        assertEquals(false, report.cacheHit)
+        assertEquals(1, report.candidates.size)
         assertEquals(scannedTarget, cache.get(fingerprint, hookId)?.target)
     }
 
@@ -125,12 +129,14 @@ class HookResolverTest {
             candidateProvider = { emptyList() },
         )
 
-        val result = resolver.resolve(
+        val report = resolver.resolveWithReport(
             fingerprint = fingerprint,
             definition = HookDefinition(HookTargetId("send_message"), minimumScore = 70),
         )
 
-        assertEquals(HookResolveResult.Failed(HookResolveFailure.NoCandidates), result)
+        assertEquals(HookResolveResult.Failed(HookResolveFailure.NoCandidates), report.result)
+        assertEquals(false, report.cacheHit)
+        assertEquals(0, report.candidates.size)
     }
 
     @Test
@@ -153,15 +159,118 @@ class HookResolverTest {
             },
         )
 
-        val result = resolver.resolve(
+        val report = resolver.resolveWithReport(
             fingerprint = fingerprint,
             definition = HookDefinition(HookTargetId("send_message"), minimumScore = 70),
         )
 
         assertEquals(
             HookResolveResult.Failed(HookResolveFailure.ScoreBelowThreshold(bestScore = 20, minimumScore = 70)),
-            result,
+            report.result,
         )
+        assertEquals(false, report.cacheHit)
+        assertEquals(1, report.candidates.size)
+    }
+
+    @Test
+    fun resolverReportSortsCandidatesByScoreDescending() {
+        val highTarget = ResolvedHookTarget.Method(
+            className = "com.tencent.mm.HighScore",
+            methodName = "a",
+            parameterTypeNames = emptyList(),
+            returnTypeName = "void",
+        )
+        val lowTarget = ResolvedHookTarget.Method(
+            className = "com.tencent.mm.LowScore",
+            methodName = "b",
+            parameterTypeNames = emptyList(),
+            returnTypeName = "void",
+        )
+        val resolver = HookResolver(
+            cache = MemoryHookCache(),
+            targetValidator = { true },
+            candidateProvider = {
+                listOf(
+                    HookCandidate(
+                        target = lowTarget,
+                        features = listOf(HookFeatureScore("weak_feature", 20, true)),
+                    ),
+                    HookCandidate(
+                        target = highTarget,
+                        features = listOf(HookFeatureScore("strong_feature", 90, true)),
+                    ),
+                )
+            },
+        )
+
+        val report = resolver.resolveWithReport(
+            fingerprint = fingerprint,
+            definition = HookDefinition(HookTargetId("send_message"), minimumScore = 70),
+        )
+
+        assertEquals(HookResolveResult.Scanned(highTarget, score = 90), report.result)
+        assertEquals(listOf(90, 20), report.candidates.map(HookCandidate::score))
+    }
+
+    @Test
+    fun resolverConvertsProviderExceptionToFailure() {
+        val resolver = HookResolver(
+            cache = MemoryHookCache(),
+            targetValidator = { true },
+            candidateProvider = { throw IllegalStateException("scan failed") },
+        )
+
+        val report = resolver.resolveWithReport(
+            fingerprint = fingerprint,
+            definition = HookDefinition(HookTargetId("send_message"), minimumScore = 70),
+        )
+
+        assertEquals(
+            HookResolveResult.Failed(HookResolveFailure.ExceptionThrown("IllegalStateException")),
+            report.result,
+        )
+        assertEquals(false, report.cacheHit)
+        assertEquals(0, report.candidates.size)
+    }
+
+    @Test
+    fun resolverConvertsCacheWriteExceptionToFailureWithCandidates() {
+        val scannedTarget = ResolvedHookTarget.Method(
+            className = "com.tencent.mm.Fresh",
+            methodName = "b",
+            parameterTypeNames = emptyList(),
+            returnTypeName = "void",
+        )
+        val cache = object : HookCache {
+            override fun get(fingerprint: VersionFingerprint, hookId: HookTargetId): HookCacheEntry? = null
+
+            override fun put(fingerprint: VersionFingerprint, hookId: HookTargetId, entry: HookCacheEntry) {
+                throw IllegalStateException("cache unavailable")
+            }
+        }
+        val resolver = HookResolver(
+            cache = cache,
+            targetValidator = { true },
+            candidateProvider = {
+                listOf(
+                    HookCandidate(
+                        target = scannedTarget,
+                        features = listOf(HookFeatureScore("class_shape", 80, true)),
+                    ),
+                )
+            },
+        )
+
+        val report = resolver.resolveWithReport(
+            fingerprint = fingerprint,
+            definition = HookDefinition(HookTargetId("send_message"), minimumScore = 70),
+        )
+
+        assertEquals(
+            HookResolveResult.Failed(HookResolveFailure.ExceptionThrown("IllegalStateException")),
+            report.result,
+        )
+        assertEquals(1, report.candidates.size)
     }
 
     @Test

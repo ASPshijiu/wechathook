@@ -1,17 +1,47 @@
 package com.android.wechathook
 
+import android.app.Application
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import com.android.wechathook.antiupdate.HookDefinition
 import com.android.wechathook.antiupdate.HookDiagnosticEvent
-import com.android.wechathook.antiupdate.HookResolveResult
 import com.android.wechathook.antiupdate.HookResolver
 import com.android.wechathook.antiupdate.MemoryHookCache
+import com.android.wechathook.antiupdate.VersionFingerprint
 import com.android.wechathook.antiupdate.VersionFingerprintProvider
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageLoadedParam
+import java.io.File
 
 internal fun shouldRunAntiUpdateResolution(hookDefinitions: List<HookDefinition>): Boolean = hookDefinitions.isNotEmpty()
+
+internal fun buildVersionFingerprint(
+    packageName: String,
+    applicationInfo: ApplicationInfo,
+    packageInfoProvider: () -> PackageInfo?,
+): VersionFingerprint {
+    val packageInfo = try {
+        packageInfoProvider()
+    } catch (_: Exception) {
+        null
+    }
+    if (packageInfo != null) {
+        return VersionFingerprintProvider.fromAndroidPackageInfo(packageInfo, applicationInfo)
+    }
+
+    val apkPath = applicationInfo.sourceDir.orEmpty()
+    return VersionFingerprintProvider.fromPackageInfo(
+        packageName = packageName,
+        versionName = "",
+        versionCode = 0L,
+        apkPath = apkPath,
+        apkLastModified = apkPath.takeIf(String::isNotEmpty)?.let { File(it).lastModified() } ?: 0L,
+    )
+}
 
 class WeChatHookModule : XposedModule() {
     private val hookCache = MemoryHookCache()
@@ -30,12 +60,10 @@ class WeChatHookModule : XposedModule() {
     }
 
     private fun runAntiUpdateResolution(param: PackageLoadedParam) {
-        val fingerprint = VersionFingerprintProvider.fromPackageInfo(
+        val fingerprint = buildVersionFingerprint(
             packageName = param.packageName,
-            versionName = param.applicationInfo.metaData?.getString("versionName").orEmpty(),
-            versionCode = 0L,
-            apkPath = param.applicationInfo.sourceDir.orEmpty(),
-            apkLastModified = param.applicationInfo.sourceDir?.let { java.io.File(it).lastModified() } ?: 0L,
+            applicationInfo = param.applicationInfo,
+            packageInfoProvider = { loadPackageInfo(param.packageName) },
         )
         val resolver = HookResolver(
             cache = hookCache,
@@ -44,17 +72,31 @@ class WeChatHookModule : XposedModule() {
         )
 
         FIRST_STAGE_HOOKS.forEach { definition ->
-            val result = resolver.resolve(fingerprint, definition)
-            val diagnostic = HookDiagnosticEvent(
+            val report = resolver.resolveWithReport(fingerprint, definition)
+            val diagnostic = HookDiagnosticEvent.fromReport(
                 fingerprint = fingerprint,
                 hookId = definition.id,
-                cacheHit = false,
-                candidateCount = 0,
-                topCandidates = emptyList(),
-                failure = (result as? HookResolveResult.Failed)?.failure,
+                report = report,
             )
             log(Log.INFO, TAG, diagnostic.toLogMessage())
         }
+    }
+
+    private fun loadPackageInfo(packageName: String): PackageInfo? {
+        val application = currentApplication() ?: return null
+        val packageManager = application.packageManager ?: return null
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0L))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(packageName, 0)
+        }
+    }
+
+    private fun currentApplication(): Application? {
+        return Class.forName("android.app.ActivityThread")
+            .getMethod("currentApplication")
+            .invoke(null) as? Application
     }
 
     companion object {
