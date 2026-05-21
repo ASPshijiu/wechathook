@@ -160,4 +160,20 @@ class HookResolverTest {
             result,
         )
     }
+
+    @Test
+    fun emptyFirstStageDefinitionsDoNotFailModuleStartup() {
+        val resolver = HookResolver(
+            cache = MemoryHookCache(),
+            targetValidator = { true },
+            candidateProvider = { emptyList() },
+        )
+        val definitions = emptyList<HookDefinition>()
+
+        val results = definitions.map { definition ->
+            resolver.resolve(fingerprint, definition)
+        }
+
+        assertEquals(emptyList<HookResolveResult>(), results)
+    }
 }
