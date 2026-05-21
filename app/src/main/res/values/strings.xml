@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">WeChat Hook</string>
+    <string name="app_description">LSPosed module for WeChat</string>
+</resources>
