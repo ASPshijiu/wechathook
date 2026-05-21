@@ -113,4 +113,51 @@ class HookResolverTest {
         assertEquals(HookResolveResult.Scanned(scannedTarget, score = 80), result)
         assertEquals(scannedTarget, cache.get(fingerprint, hookId)?.target)
     }
+
+    @Test
+    fun resolverReturnsNoCandidatesFailure() {
+        val resolver = HookResolver(
+            cache = MemoryHookCache(),
+            targetValidator = { true },
+            candidateProvider = { emptyList() },
+        )
+
+        val result = resolver.resolve(
+            fingerprint = fingerprint,
+            definition = HookDefinition(HookTargetId("send_message"), minimumScore = 70),
+        )
+
+        assertEquals(HookResolveResult.Failed(HookResolveFailure.NoCandidates), result)
+    }
+
+    @Test
+    fun resolverReturnsBelowThresholdFailure() {
+        val resolver = HookResolver(
+            cache = MemoryHookCache(),
+            targetValidator = { true },
+            candidateProvider = {
+                listOf(
+                    HookCandidate(
+                        target = ResolvedHookTarget.Method(
+                            className = "com.tencent.mm.LowScore",
+                            methodName = "a",
+                            parameterTypeNames = emptyList(),
+                            returnTypeName = "void",
+                        ),
+                        features = listOf(HookFeatureScore("weak_feature", 20, true)),
+                    ),
+                )
+            },
+        )
+
+        val result = resolver.resolve(
+            fingerprint = fingerprint,
+            definition = HookDefinition(HookTargetId("send_message"), minimumScore = 70),
+        )
+
+        assertEquals(
+            HookResolveResult.Failed(HookResolveFailure.ScoreBelowThreshold(bestScore = 20, minimumScore = 70)),
+            result,
+        )
+    }
 }
