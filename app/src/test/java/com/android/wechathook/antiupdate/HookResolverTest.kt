@@ -1,7 +1,10 @@
 package com.android.wechathook.antiupdate
 
+import com.android.wechathook.shouldRunAntiUpdateResolution
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HookResolverTest {
@@ -163,17 +166,11 @@ class HookResolverTest {
 
     @Test
     fun emptyFirstStageDefinitionsDoNotFailModuleStartup() {
-        val resolver = HookResolver(
-            cache = MemoryHookCache(),
-            targetValidator = { true },
-            candidateProvider = { emptyList() },
-        )
-        val definitions = emptyList<HookDefinition>()
+        assertFalse(shouldRunAntiUpdateResolution(emptyList()))
+    }
 
-        val results = definitions.map { definition ->
-            resolver.resolve(fingerprint, definition)
-        }
-
-        assertEquals(emptyList<HookResolveResult>(), results)
+    @Test
+    fun nonEmptyFirstStageDefinitionsRunModuleStartupResolution() {
+        assertTrue(shouldRunAntiUpdateResolution(listOf(HookDefinition(HookTargetId("send_message"), minimumScore = 70))))
     }
 }

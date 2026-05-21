@@ -11,6 +11,8 @@ import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageLoadedParam
 
+internal fun shouldRunAntiUpdateResolution(hookDefinitions: List<HookDefinition>): Boolean = hookDefinitions.isNotEmpty()
+
 class WeChatHookModule : XposedModule() {
     private val hookCache = MemoryHookCache()
 
@@ -22,6 +24,8 @@ class WeChatHookModule : XposedModule() {
         if (param.packageName != WECHAT_PACKAGE_NAME) return
 
         log(Log.INFO, TAG, "WeChat package loaded")
+        if (!shouldRunAntiUpdateResolution(FIRST_STAGE_HOOKS)) return
+
         runAntiUpdateResolution(param)
     }
 
