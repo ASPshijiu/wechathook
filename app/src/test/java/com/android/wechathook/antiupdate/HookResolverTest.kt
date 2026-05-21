@@ -4,6 +4,7 @@ import com.android.wechathook.shouldRunAntiUpdateResolution
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -231,6 +232,22 @@ class HookResolverTest {
         )
         assertEquals(false, report.cacheHit)
         assertEquals(0, report.candidates.size)
+    }
+
+    @Test
+    fun resolverDoesNotConvertProviderErrorToFailure() {
+        val resolver = HookResolver(
+            cache = MemoryHookCache(),
+            targetValidator = { true },
+            candidateProvider = { throw AssertionError("fatal scan error") },
+        )
+
+        assertThrows(AssertionError::class.java) {
+            resolver.resolveWithReport(
+                fingerprint = fingerprint,
+                definition = HookDefinition(HookTargetId("send_message"), minimumScore = 70),
+            )
+        }
     }
 
     @Test
