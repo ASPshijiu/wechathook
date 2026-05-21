@@ -106,4 +106,29 @@ class HookDiagnosticsTest {
         assertEquals("<init>", event.topCandidates[1].memberName)
         assertEquals(HookResolveFailure.ExceptionThrown("IllegalStateException"), event.failure)
     }
+
+    @Test
+    fun exceptionFailureLogContainsOnlyExceptionType() {
+        val fingerprint = VersionFingerprint(
+            packageName = "com.tencent.mm",
+            versionName = "8.0.49",
+            versionCode = 2460L,
+            apkPath = "/data/app/com.tencent.mm/base.apk",
+            apkLastModified = 1710000000000L,
+        )
+        val event = HookDiagnosticEvent(
+            fingerprint = fingerprint,
+            hookId = HookTargetId("send_message"),
+            cacheHit = false,
+            candidateCount = 0,
+            topCandidates = emptyList(),
+            failure = HookResolveFailure.ExceptionThrown("IllegalStateException"),
+        )
+
+        val message = event.toLogMessage()
+
+        assertTrue(message.contains("failure=IllegalStateException"))
+        assertFalse(message.contains("ExceptionThrown"))
+        assertFalse(message.contains("package manager unavailable"))
+    }
 }

@@ -19,7 +19,11 @@ data class HookDiagnosticEvent(
         val candidates = topCandidates.joinToString(separator = ";") { candidate ->
             "${candidate.className}#${candidate.memberName}:score=${candidate.score}:features=${candidate.matchedFeatures.joinToString(separator = ",")}"
         }
-        val failureName = failure?.javaClass?.simpleName ?: "none"
+        val failureName = when (val currentFailure = failure) {
+            null -> "none"
+            is HookResolveFailure.ExceptionThrown -> currentFailure.exceptionType
+            else -> currentFailure.javaClass.simpleName
+        }
         return "HookDiagnostic(fingerprint=${fingerprint.displayName}, hookId=${hookId.value}, cacheHit=$cacheHit, candidateCount=$candidateCount, topCandidates=[$candidates], failure=$failureName)"
     }
 
