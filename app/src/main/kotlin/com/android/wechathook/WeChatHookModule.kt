@@ -22,10 +22,12 @@ internal fun shouldRunAntiUpdateResolution(hookDefinitions: List<HookDefinition>
 
 internal fun buildStartupDiagnosticMessage(
     packageName: String,
+    processName: String,
+    isMainProcess: Boolean,
     isFirstPackage: Boolean,
     hookCount: Int,
 ): String {
-    return "StartupDiagnostic(packageName=$packageName, isFirstPackage=$isFirstPackage, hookCount=$hookCount, antiUpdateEnabled=${hookCount > 0})"
+    return "StartupDiagnostic(packageName=$packageName, processName=$processName, mainProcess=$isMainProcess, isFirstPackage=$isFirstPackage, hookCount=$hookCount, antiUpdateEnabled=${hookCount > 0})"
 }
 
 internal fun buildFirstHookDiagnosticMessage(
@@ -70,16 +72,22 @@ class WeChatHookModule : XposedModule() {
     override fun onPackageLoaded(param: PackageLoadedParam) {
         if (param.packageName != WECHAT_PACKAGE_NAME) return
 
+        val processName = currentProcessName().orEmpty()
+        val isMainProcess = processName == param.packageName
         log(Log.INFO, TAG, "WeChat package loaded")
         log(
             Log.INFO,
             TAG,
             buildStartupDiagnosticMessage(
                 packageName = param.packageName,
+                processName = processName,
+                isMainProcess = isMainProcess,
                 isFirstPackage = param.isFirstPackage,
                 hookCount = FIRST_STAGE_HOOKS.size,
             ),
         )
+        if (!isMainProcess) return
+
         installApplicationOnCreateDiagnosticHook(param.packageName)
         if (!shouldRunAntiUpdateResolution(FIRST_STAGE_HOOKS)) return
 
@@ -144,6 +152,16 @@ class WeChatHookModule : XposedModule() {
         return Class.forName("android.app.ActivityThread")
             .getMethod("currentApplication")
             .invoke(null) as? Application
+    }
+
+    private fun currentProcessName(): String? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            Application.getProcessName()
+        } else {
+            Class.forName("android.app.ActivityThread")
+                .getMethod("currentProcessName")
+                .invoke(null) as? String
+        }
     }
 
     companion object {

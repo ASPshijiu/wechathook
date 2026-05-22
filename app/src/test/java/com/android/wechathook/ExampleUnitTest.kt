@@ -13,11 +13,15 @@ class ExampleUnitTest {
     fun startupDiagnosticContainsOnlyTechnicalState() {
         val message = buildStartupDiagnosticMessage(
             packageName = "com.tencent.mm",
+            processName = "com.tencent.mm",
+            isMainProcess = true,
             isFirstPackage = true,
             hookCount = 0,
         )
 
         assertTrue(message.contains("packageName=com.tencent.mm"))
+        assertTrue(message.contains("processName=com.tencent.mm"))
+        assertTrue(message.contains("mainProcess=true"))
         assertTrue(message.contains("isFirstPackage=true"))
         assertTrue(message.contains("hookCount=0"))
         assertTrue(message.contains("antiUpdateEnabled=false"))
@@ -30,10 +34,14 @@ class ExampleUnitTest {
     fun startupDiagnosticShowsAntiUpdateEnabledWhenHooksExist() {
         val message = buildStartupDiagnosticMessage(
             packageName = "com.tencent.mm",
+            processName = "com.tencent.mm:push",
+            isMainProcess = false,
             isFirstPackage = false,
             hookCount = 1,
         )
 
+        assertTrue(message.contains("processName=com.tencent.mm:push"))
+        assertTrue(message.contains("mainProcess=false"))
         assertTrue(message.contains("isFirstPackage=false"))
         assertTrue(message.contains("hookCount=1"))
         assertTrue(message.contains("antiUpdateEnabled=true"))
