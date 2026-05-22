@@ -66,12 +66,12 @@ class ExampleUnitTest {
     @Test
     fun weChatApplicationHookDiagnosticContainsOnlyTechnicalState() {
         val message = buildWeChatApplicationHookDiagnosticMessage(
-            target = "com.tencent.mm.app.WeChatApplication#onCreate",
+            target = "com.tencent.mm.app.Application#attachBaseContext(android.content.Context)",
             packageName = "com.tencent.mm",
             triggered = true,
         )
 
-        assertTrue(message.contains("target=com.tencent.mm.app.WeChatApplication#onCreate"))
+        assertTrue(message.contains("target=com.tencent.mm.app.Application#attachBaseContext(android.content.Context)"))
         assertTrue(message.contains("packageName=com.tencent.mm"))
         assertTrue(message.contains("triggered=true"))
         assertFalse(message.contains("聊天"))

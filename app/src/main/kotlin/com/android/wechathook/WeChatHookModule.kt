@@ -1,6 +1,7 @@
 package com.android.wechathook
 
 import android.app.Application
+import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
@@ -131,9 +132,9 @@ class WeChatHookModule : XposedModule() {
                 return
             }
             val applicationClass = param.defaultClassLoader.loadClass(applicationClassName)
-            val onCreate = applicationClass.getDeclaredMethod("onCreate")
-            val target = "$applicationClassName#onCreate"
-            hook(onCreate)
+            val attachBaseContext = applicationClass.getDeclaredMethod("attachBaseContext", Context::class.java)
+            val target = "$applicationClassName#attachBaseContext(android.content.Context)"
+            hook(attachBaseContext)
                 .setExceptionMode(ExceptionMode.PROTECTIVE)
                 .intercept { chain ->
                     val result = chain.proceed()
