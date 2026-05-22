@@ -13,6 +13,8 @@ import com.android.wechathook.antiupdate.HookResolver
 import com.android.wechathook.antiupdate.MemoryHookCache
 import com.android.wechathook.antiupdate.VersionFingerprint
 import com.android.wechathook.antiupdate.VersionFingerprintProvider
+import com.android.wechathook.diagnostics.HookStatus
+import com.android.wechathook.diagnostics.ModuleDiagnostics
 import io.github.libxposed.api.XposedInterface.ExceptionMode
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
@@ -71,6 +73,11 @@ internal fun buildVersionFingerprint(
     )
 }
 
+private data class WeChatApplicationHookInstallation(
+    val target: String?,
+    val status: HookStatus,
+)
+
 class WeChatHookModule : XposedModule() {
     private val hookCache = MemoryHookCache()
 
@@ -98,7 +105,9 @@ class WeChatHookModule : XposedModule() {
         if (!isMainProcess) return
 
         installApplicationOnCreateDiagnosticHook(param.packageName)
-        installWeChatApplicationOnCreateDiagnosticHook(param)
+        val packageInfo = loadPackageInfoOrNull(param.packageName)
+        val wechatApplicationHook = installWeChatApplicationOnCreateDiagnosticHook(param)
+        log(Log.INFO, TAG, buildModuleDiagnostics(param, processName, isMainProcess, packageInfo, wechatApplicationHook).toReport())
         if (!shouldRunAntiUpdateResolution(FIRST_STAGE_HOOKS)) return
 
         runAntiUpdateResolution(param)
@@ -124,12 +133,12 @@ class WeChatHookModule : XposedModule() {
         log(Log.INFO, TAG, "First hook installed: $APPLICATION_ON_CREATE_TARGET")
     }
 
-    private fun installWeChatApplicationOnCreateDiagnosticHook(param: PackageLoadedParam) {
-        try {
+    private fun installWeChatApplicationOnCreateDiagnosticHook(param: PackageLoadedParam): WeChatApplicationHookInstallation {
+        return try {
             val applicationClassName = param.applicationInfo.className.orEmpty()
             if (applicationClassName.isEmpty()) {
                 log(Log.WARN, TAG, "WeChat application class is empty")
-                return
+                return WeChatApplicationHookInstallation(target = null, status = HookStatus.SKIPPED)
             }
             val applicationClass = param.defaultClassLoader.loadClass(applicationClassName)
             val attachBaseContext = applicationClass.getDeclaredMethod("attachBaseContext", Context::class.java)
@@ -150,9 +159,32 @@ class WeChatHookModule : XposedModule() {
                     result
                 }
             log(Log.INFO, TAG, "WeChat application hook installed: $target")
+            WeChatApplicationHookInstallation(target = target, status = HookStatus.INSTALLED)
         } catch (exception: Exception) {
             log(Log.WARN, TAG, "WeChat application hook skipped: ${exception.javaClass.simpleName}")
+            WeChatApplicationHookInstallation(target = null, status = HookStatus.FAILED)
         }
+    }
+
+    private fun buildModuleDiagnostics(
+        param: PackageLoadedParam,
+        processName: String,
+        isMainProcess: Boolean,
+        packageInfo: PackageInfo?,
+        wechatApplicationHook: WeChatApplicationHookInstallation,
+    ): ModuleDiagnostics {
+        return ModuleDiagnostics(
+            moduleName = MODULE_NAME,
+            moduleVersion = MODULE_VERSION,
+            packageName = param.packageName,
+            processName = processName,
+            isMainProcess = isMainProcess,
+            wechatVersionName = packageInfo?.versionName.orEmpty(),
+            wechatVersionCode = packageInfo?.longVersionCode ?: 0L,
+            startupHookInstalled = true,
+            wechatApplicationHookTarget = wechatApplicationHook.target,
+            wechatApplicationHookStatus = wechatApplicationHook.status,
+        )
     }
 
     private fun runAntiUpdateResolution(param: PackageLoadedParam) {
@@ -189,6 +221,14 @@ class WeChatHookModule : XposedModule() {
         }
     }
 
+    private fun loadPackageInfoOrNull(packageName: String): PackageInfo? {
+        return try {
+            loadPackageInfo(packageName)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun currentApplication(): Application? {
         return Class.forName("android.app.ActivityThread")
             .getMethod("currentApplication")
@@ -207,6 +247,8 @@ class WeChatHookModule : XposedModule() {
 
     companion object {
         private const val TAG = "WeChatHook"
+        private const val MODULE_NAME = "WeChat Hook"
+        private const val MODULE_VERSION = "debug"
         private const val WECHAT_PACKAGE_NAME = "com.tencent.mm"
         private const val APPLICATION_ON_CREATE_TARGET = "android.app.Application#onCreate"
         private val FIRST_STAGE_HOOKS = emptyList<HookDefinition>()
