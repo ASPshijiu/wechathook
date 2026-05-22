@@ -55,6 +55,33 @@ class WeChatSettingsEntryTest {
     }
 
     @Test
+    fun moduleConfigItemsFollowCurrentConfig() {
+        val items = buildModuleConfigItems(
+            ModuleFeatureConfig(
+                diagnosticsEnabled = true,
+                settingsEntryEnabled = false,
+                antiUpdateResolutionEnabled = true,
+                userDataReadEnabled = false,
+            ),
+        )
+
+        assertTrue(items[0])
+        assertFalse(items[1])
+        assertTrue(items[2])
+        assertFalse(items[3])
+    }
+
+    @Test
+    fun moduleFeatureConfigFromItemsKeepsUserDataReadDisabled() {
+        val config = buildModuleFeatureConfigFromItems(booleanArrayOf(false, true, true, true))
+
+        assertFalse(config.diagnosticsEnabled)
+        assertTrue(config.settingsEntryEnabled)
+        assertTrue(config.antiUpdateResolutionEnabled)
+        assertFalse(config.userDataReadEnabled)
+    }
+
+    @Test
     fun settingsEntryTitleContainsNoSensitiveContent() {
         assertFalse(WECHAT_SETTINGS_ENTRY_TITLE.contains("聊天"))
         assertFalse(WECHAT_SETTINGS_ENTRY_TITLE.contains("联系人"))

@@ -70,7 +70,42 @@ internal fun showModuleDiagnosticsDialog(activity: Activity) {
             val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("WeChat Hook Diagnostics", report))
         }
+        .setNeutralButton("配置") { _, _ -> showModuleConfigDialog(activity) }
         .setNegativeButton("关闭", null)
+        .show()
+}
+
+internal fun buildModuleConfigItems(config: ModuleFeatureConfig): BooleanArray {
+    return booleanArrayOf(
+        config.diagnosticsEnabled,
+        config.settingsEntryEnabled,
+        config.antiUpdateResolutionEnabled,
+        config.userDataReadEnabled,
+    )
+}
+
+internal fun buildModuleFeatureConfigFromItems(items: BooleanArray): ModuleFeatureConfig {
+    return ModuleFeatureConfig(
+        diagnosticsEnabled = items.getOrElse(0) { true },
+        settingsEntryEnabled = items.getOrElse(1) { true },
+        antiUpdateResolutionEnabled = items.getOrElse(2) { false },
+        userDataReadEnabled = false,
+    )
+}
+
+private fun showModuleConfigDialog(activity: Activity) {
+    val items = arrayOf("模块诊断", "微信设置入口", "抗更新定位", "用户数据读取（未开放）")
+    val checkedItems = buildModuleConfigItems(ModuleFeatureConfigStore.load(activity))
+    AlertDialog.Builder(activity)
+        .setTitle("功能配置")
+        .setMultiChoiceItems(items, checkedItems) { _, index, isChecked ->
+            checkedItems[index] = isChecked
+        }
+        .setPositiveButton("保存") { _, _ ->
+            ModuleFeatureConfigStore.save(activity, buildModuleFeatureConfigFromItems(checkedItems))
+            showModuleDiagnosticsDialog(activity)
+        }
+        .setNegativeButton("取消", null)
         .show()
 }
 

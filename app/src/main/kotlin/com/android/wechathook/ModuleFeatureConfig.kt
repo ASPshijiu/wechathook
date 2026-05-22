@@ -25,4 +25,14 @@ internal object ModuleFeatureConfigStore {
             userDataReadEnabled = preferences.getBoolean(USER_DATA_READ_ENABLED, false),
         )
     }
+
+    fun save(context: Context, config: ModuleFeatureConfig) {
+        context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(DIAGNOSTICS_ENABLED, config.diagnosticsEnabled)
+            .putBoolean(SETTINGS_ENTRY_ENABLED, config.settingsEntryEnabled)
+            .putBoolean(ANTI_UPDATE_RESOLUTION_ENABLED, config.antiUpdateResolutionEnabled)
+            .putBoolean(USER_DATA_READ_ENABLED, config.userDataReadEnabled)
+            .apply()
+    }
 }
