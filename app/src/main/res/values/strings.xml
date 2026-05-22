@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">WeChat Hook</string>
     <string name="app_description">LSPosed module for WeChat</string>
+    <string name="copy_diagnostics">复制诊断信息</string>
+    <string name="diagnostics_clip_label">WeChat Hook Diagnostics</string>
+    <string name="diagnostics_copied">诊断信息已复制</string>
 </resources>
