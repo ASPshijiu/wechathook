@@ -15,6 +15,9 @@ class ModuleDiagnosticsTest {
             isMainProcess = true,
             wechatVersionName = "8.0.71",
             wechatVersionCode = 3080L,
+            apkPath = "/data/app/com.tencent.mm/base.apk",
+            apkLastModified = 1710000000000L,
+            fingerprintKey = "com.tencent.mm|8.0.71|3080|/data/app/com.tencent.mm/base.apk|1710000000000",
             startupHookInstalled = true,
             wechatApplicationHookTarget = "com.tencent.mm.app.Application#attachBaseContext(android.content.Context)",
             wechatApplicationHookStatus = HookStatus.INSTALLED,
@@ -27,6 +30,9 @@ class ModuleDiagnosticsTest {
         assertTrue(report.contains("mainProcess=true"))
         assertTrue(report.contains("wechatVersionName=8.0.71"))
         assertTrue(report.contains("wechatVersionCode=3080"))
+        assertTrue(report.contains("apkPath=/data/app/com.tencent.mm/base.apk"))
+        assertTrue(report.contains("apkLastModified=1710000000000"))
+        assertTrue(report.contains("fingerprintKey=com.tencent.mm|8.0.71|3080|/data/app/com.tencent.mm/base.apk|1710000000000"))
         assertTrue(report.contains("startupHookInstalled=true"))
         assertTrue(report.contains("wechatApplicationHookTarget=com.tencent.mm.app.Application#attachBaseContext(android.content.Context)"))
         assertTrue(report.contains("wechatApplicationHookStatus=INSTALLED"))

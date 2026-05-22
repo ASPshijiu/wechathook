@@ -8,6 +8,9 @@ data class ModuleDiagnostics(
     val isMainProcess: Boolean,
     val wechatVersionName: String,
     val wechatVersionCode: Long,
+    val apkPath: String,
+    val apkLastModified: Long,
+    val fingerprintKey: String,
     val startupHookInstalled: Boolean,
     val wechatApplicationHookTarget: String?,
     val wechatApplicationHookStatus: HookStatus,
@@ -22,6 +25,9 @@ data class ModuleDiagnostics(
             appendLine("mainProcess=$isMainProcess")
             appendLine("wechatVersionName=$wechatVersionName")
             appendLine("wechatVersionCode=$wechatVersionCode")
+            appendLine("apkPath=$apkPath")
+            appendLine("apkLastModified=$apkLastModified")
+            appendLine("fingerprintKey=$fingerprintKey")
             appendLine("startupHookInstalled=$startupHookInstalled")
             appendLine("wechatApplicationHookTarget=${wechatApplicationHookTarget.orEmpty()}")
             appendLine("wechatApplicationHookStatus=${wechatApplicationHookStatus.name}")

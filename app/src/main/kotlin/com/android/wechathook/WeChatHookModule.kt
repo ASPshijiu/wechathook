@@ -105,9 +105,13 @@ class WeChatHookModule : XposedModule() {
         if (!isMainProcess) return
 
         installApplicationOnCreateDiagnosticHook(param.packageName)
-        val packageInfo = loadPackageInfoOrNull(param.packageName)
+        val fingerprint = buildVersionFingerprint(
+            packageName = param.packageName,
+            applicationInfo = param.applicationInfo,
+            packageInfoProvider = { loadPackageInfoOrNull(param.packageName) },
+        )
         val wechatApplicationHook = installWeChatApplicationOnCreateDiagnosticHook(param)
-        log(Log.INFO, TAG, buildModuleDiagnostics(param, processName, isMainProcess, packageInfo, wechatApplicationHook).toReport())
+        log(Log.INFO, TAG, buildModuleDiagnostics(param, processName, isMainProcess, fingerprint, wechatApplicationHook).toReport())
         if (!shouldRunAntiUpdateResolution(FIRST_STAGE_HOOKS)) return
 
         runAntiUpdateResolution(param)
@@ -170,7 +174,7 @@ class WeChatHookModule : XposedModule() {
         param: PackageLoadedParam,
         processName: String,
         isMainProcess: Boolean,
-        packageInfo: PackageInfo?,
+        fingerprint: VersionFingerprint,
         wechatApplicationHook: WeChatApplicationHookInstallation,
     ): ModuleDiagnostics {
         return ModuleDiagnostics(
@@ -179,8 +183,11 @@ class WeChatHookModule : XposedModule() {
             packageName = param.packageName,
             processName = processName,
             isMainProcess = isMainProcess,
-            wechatVersionName = packageInfo?.versionName.orEmpty(),
-            wechatVersionCode = packageInfo?.longVersionCode ?: 0L,
+            wechatVersionName = fingerprint.versionName,
+            wechatVersionCode = fingerprint.versionCode,
+            apkPath = fingerprint.apkPath,
+            apkLastModified = fingerprint.apkLastModified,
+            fingerprintKey = fingerprint.cacheKey,
             startupHookInstalled = true,
             wechatApplicationHookTarget = wechatApplicationHook.target,
             wechatApplicationHookStatus = wechatApplicationHook.status,
