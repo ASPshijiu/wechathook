@@ -64,6 +64,22 @@ class ExampleUnitTest {
     }
 
     @Test
+    fun weChatApplicationHookDiagnosticContainsOnlyTechnicalState() {
+        val message = buildWeChatApplicationHookDiagnosticMessage(
+            target = "com.tencent.mm.app.WeChatApplication#onCreate",
+            packageName = "com.tencent.mm",
+            triggered = true,
+        )
+
+        assertTrue(message.contains("target=com.tencent.mm.app.WeChatApplication#onCreate"))
+        assertTrue(message.contains("packageName=com.tencent.mm"))
+        assertTrue(message.contains("triggered=true"))
+        assertFalse(message.contains("聊天"))
+        assertFalse(message.contains("联系人"))
+        assertFalse(message.contains("消息正文"))
+    }
+
+    @Test
     fun fingerprintUsesAndroidPackageInfoWhenAvailable() {
         val apk = File.createTempFile("wechat", ".apk")
         try {

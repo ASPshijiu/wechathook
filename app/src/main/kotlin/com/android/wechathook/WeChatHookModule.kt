@@ -38,6 +38,14 @@ internal fun buildFirstHookDiagnosticMessage(
     return "FirstHookDiagnostic(target=$target, packageName=$packageName, triggered=$triggered)"
 }
 
+internal fun buildWeChatApplicationHookDiagnosticMessage(
+    target: String,
+    packageName: String,
+    triggered: Boolean,
+): String {
+    return "WeChatApplicationHookDiagnostic(target=$target, packageName=$packageName, triggered=$triggered)"
+}
+
 internal fun buildVersionFingerprint(
     packageName: String,
     applicationInfo: ApplicationInfo,
@@ -89,6 +97,7 @@ class WeChatHookModule : XposedModule() {
         if (!isMainProcess) return
 
         installApplicationOnCreateDiagnosticHook(param.packageName)
+        installWeChatApplicationOnCreateDiagnosticHook(param)
         if (!shouldRunAntiUpdateResolution(FIRST_STAGE_HOOKS)) return
 
         runAntiUpdateResolution(param)
@@ -112,6 +121,37 @@ class WeChatHookModule : XposedModule() {
                 result
             }
         log(Log.INFO, TAG, "First hook installed: $APPLICATION_ON_CREATE_TARGET")
+    }
+
+    private fun installWeChatApplicationOnCreateDiagnosticHook(param: PackageLoadedParam) {
+        try {
+            val applicationClassName = param.applicationInfo.className.orEmpty()
+            if (applicationClassName.isEmpty()) {
+                log(Log.WARN, TAG, "WeChat application class is empty")
+                return
+            }
+            val applicationClass = param.defaultClassLoader.loadClass(applicationClassName)
+            val onCreate = applicationClass.getDeclaredMethod("onCreate")
+            val target = "$applicationClassName#onCreate"
+            hook(onCreate)
+                .setExceptionMode(ExceptionMode.PROTECTIVE)
+                .intercept { chain ->
+                    val result = chain.proceed()
+                    log(
+                        Log.INFO,
+                        TAG,
+                        buildWeChatApplicationHookDiagnosticMessage(
+                            target = target,
+                            packageName = param.packageName,
+                            triggered = true,
+                        ),
+                    )
+                    result
+                }
+            log(Log.INFO, TAG, "WeChat application hook installed: $target")
+        } catch (exception: Exception) {
+            log(Log.WARN, TAG, "WeChat application hook skipped: ${exception.javaClass.simpleName}")
+        }
     }
 
     private fun runAntiUpdateResolution(param: PackageLoadedParam) {
