@@ -14,7 +14,10 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val report = buildLocalDiagnosticReport()
+        val report = buildLocalDiagnosticReport(
+            source = intent.getStringExtra("source").orEmpty(),
+            targetPackage = intent.getStringExtra("targetPackage").orEmpty(),
+        )
         val content = TextView(this).apply {
             text = report
             textSize = 14f
@@ -43,12 +46,16 @@ class MainActivity : Activity() {
     }
 }
 
-internal fun buildLocalDiagnosticReport(): String {
+internal fun buildLocalDiagnosticReport(
+    source: String = "",
+    targetPackage: String = "",
+): String {
     return buildString {
         appendLine("WeChat Hook Diagnostics")
         appendLine("modulePackage=com.android.wechathook")
         appendLine("moduleVersion=1.0")
-        appendLine("targetPackage=com.tencent.mm")
+        appendLine("targetPackage=${targetPackage.ifEmpty { "com.tencent.mm" }}")
+        appendLine("entrySource=${source.ifEmpty { "launcher" }}")
         appendLine("scope=com.tencent.mm")
         appendLine("status=Open WeChat and check LSPosed logs for ModuleDiagnostics")
         appendLine("expectedMainProcess=com.tencent.mm")

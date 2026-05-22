@@ -86,8 +86,23 @@ class ExampleUnitTest {
         assertTrue(report.contains("WeChat Hook Diagnostics"))
         assertTrue(report.contains("modulePackage=com.android.wechathook"))
         assertTrue(report.contains("targetPackage=com.tencent.mm"))
+        assertTrue(report.contains("entrySource=launcher"))
         assertTrue(report.contains("expectedMainProcess=com.tencent.mm"))
         assertTrue(report.contains("expectedInternalHook=com.tencent.mm.app.Application#attachBaseContext(android.content.Context)"))
+        assertFalse(report.contains("聊天"))
+        assertFalse(report.contains("联系人"))
+        assertFalse(report.contains("消息正文"))
+    }
+
+    @Test
+    fun localDiagnosticReportShowsWeChatSettingsEntrySource() {
+        val report = buildLocalDiagnosticReport(
+            source = "wechat_settings",
+            targetPackage = "com.tencent.mm",
+        )
+
+        assertTrue(report.contains("targetPackage=com.tencent.mm"))
+        assertTrue(report.contains("entrySource=wechat_settings"))
         assertFalse(report.contains("聊天"))
         assertFalse(report.contains("联系人"))
         assertFalse(report.contains("消息正文"))
