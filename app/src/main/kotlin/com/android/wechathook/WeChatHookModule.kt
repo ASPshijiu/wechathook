@@ -19,6 +19,14 @@ import java.io.File
 
 internal fun shouldRunAntiUpdateResolution(hookDefinitions: List<HookDefinition>): Boolean = hookDefinitions.isNotEmpty()
 
+internal fun buildStartupDiagnosticMessage(
+    packageName: String,
+    isFirstPackage: Boolean,
+    hookCount: Int,
+): String {
+    return "StartupDiagnostic(packageName=$packageName, isFirstPackage=$isFirstPackage, hookCount=$hookCount, antiUpdateEnabled=${hookCount > 0})"
+}
+
 internal fun buildVersionFingerprint(
     packageName: String,
     applicationInfo: ApplicationInfo,
@@ -54,6 +62,15 @@ class WeChatHookModule : XposedModule() {
         if (param.packageName != WECHAT_PACKAGE_NAME) return
 
         log(Log.INFO, TAG, "WeChat package loaded")
+        log(
+            Log.INFO,
+            TAG,
+            buildStartupDiagnosticMessage(
+                packageName = param.packageName,
+                isFirstPackage = param.isFirstPackage,
+                hookCount = FIRST_STAGE_HOOKS.size,
+            ),
+        )
         if (!shouldRunAntiUpdateResolution(FIRST_STAGE_HOOKS)) return
 
         runAntiUpdateResolution(param)

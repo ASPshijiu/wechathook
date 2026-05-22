@@ -4,9 +4,41 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExampleUnitTest {
+    @Test
+    fun startupDiagnosticContainsOnlyTechnicalState() {
+        val message = buildStartupDiagnosticMessage(
+            packageName = "com.tencent.mm",
+            isFirstPackage = true,
+            hookCount = 0,
+        )
+
+        assertTrue(message.contains("packageName=com.tencent.mm"))
+        assertTrue(message.contains("isFirstPackage=true"))
+        assertTrue(message.contains("hookCount=0"))
+        assertTrue(message.contains("antiUpdateEnabled=false"))
+        assertFalse(message.contains("聊天"))
+        assertFalse(message.contains("联系人"))
+        assertFalse(message.contains("消息正文"))
+    }
+
+    @Test
+    fun startupDiagnosticShowsAntiUpdateEnabledWhenHooksExist() {
+        val message = buildStartupDiagnosticMessage(
+            packageName = "com.tencent.mm",
+            isFirstPackage = false,
+            hookCount = 1,
+        )
+
+        assertTrue(message.contains("isFirstPackage=false"))
+        assertTrue(message.contains("hookCount=1"))
+        assertTrue(message.contains("antiUpdateEnabled=true"))
+    }
+
     @Test
     fun fingerprintUsesAndroidPackageInfoWhenAvailable() {
         val apk = File.createTempFile("wechat", ".apk")
