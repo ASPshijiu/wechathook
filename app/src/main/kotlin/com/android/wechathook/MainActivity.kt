@@ -17,6 +17,7 @@ class MainActivity : Activity() {
         val report = buildLocalDiagnosticReport(
             source = intent.getStringExtra("source").orEmpty(),
             targetPackage = intent.getStringExtra("targetPackage").orEmpty(),
+            featureConfig = ModuleFeatureConfigStore.load(this),
         )
         val content = TextView(this).apply {
             text = report
@@ -49,6 +50,7 @@ class MainActivity : Activity() {
 internal fun buildLocalDiagnosticReport(
     source: String = "",
     targetPackage: String = "",
+    featureConfig: ModuleFeatureConfig = ModuleFeatureConfig(),
 ): String {
     val normalizedSource = source.ifEmpty { "launcher" }
     val normalizedTargetPackage = targetPackage.ifEmpty { "com.tencent.mm" }
@@ -71,16 +73,24 @@ internal fun buildLocalDiagnosticReport(
         appendLine("设置入口：MainSettingsUI 顶部菜单")
         appendLine()
         appendLine("【功能状态】")
-        appendLine("模块诊断：已启用")
-        appendLine("微信设置入口：已启用")
-        appendLine("抗更新定位：框架已就绪，暂无启用规则")
-        appendLine("用户数据读取：未启用")
+        appendLine("模块诊断：${buildFeatureStateLabel(featureConfig.diagnosticsEnabled)}")
+        appendLine("微信设置入口：${buildFeatureStateLabel(featureConfig.settingsEntryEnabled)}")
+        appendLine("抗更新定位：${buildAntiUpdateStateLabel(featureConfig.antiUpdateResolutionEnabled)}")
+        appendLine("用户数据读取：${buildFeatureStateLabel(featureConfig.userDataReadEnabled)}")
         appendLine()
         appendLine("【验证】")
         appendLine("模块启用：请在 LSPosed 确认作用域包含微信")
         appendLine("运行状态：请在 LSPosed 日志查看 ModuleDiagnostics")
         appendLine("设置入口：${buildSettingsEntryStatus(normalizedSource)}")
     }.trimEnd()
+}
+
+private fun buildFeatureStateLabel(enabled: Boolean): String {
+    return if (enabled) "已启用" else "未启用"
+}
+
+private fun buildAntiUpdateStateLabel(enabled: Boolean): String {
+    return if (enabled) "已启用" else "未启用（框架已就绪，暂无启用规则）"
 }
 
 private fun buildEntrySourceLabel(source: String): String {

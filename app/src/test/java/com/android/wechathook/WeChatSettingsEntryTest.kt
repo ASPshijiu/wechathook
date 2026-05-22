@@ -40,6 +40,21 @@ class WeChatSettingsEntryTest {
     }
 
     @Test
+    fun weChatDiagnosticsDialogReportShowsFeatureConfigState() {
+        val report = buildWeChatDiagnosticsDialogReport(
+            ModuleFeatureConfig(
+                diagnosticsEnabled = true,
+                settingsEntryEnabled = true,
+                antiUpdateResolutionEnabled = true,
+                userDataReadEnabled = false,
+            ),
+        )
+
+        assertTrue(report.contains("抗更新定位：已启用"))
+        assertTrue(report.contains("用户数据读取：未启用"))
+    }
+
+    @Test
     fun settingsEntryTitleContainsNoSensitiveContent() {
         assertFalse(WECHAT_SETTINGS_ENTRY_TITLE.contains("聊天"))
         assertFalse(WECHAT_SETTINGS_ENTRY_TITLE.contains("联系人"))

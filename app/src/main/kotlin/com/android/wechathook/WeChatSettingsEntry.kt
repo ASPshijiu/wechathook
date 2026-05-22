@@ -51,15 +51,18 @@ internal fun openModuleDiagnostics(context: Context) {
     context.startActivity(buildModuleDiagnosticsIntent())
 }
 
-internal fun buildWeChatDiagnosticsDialogReport(): String {
+internal fun buildWeChatDiagnosticsDialogReport(
+    featureConfig: ModuleFeatureConfig = ModuleFeatureConfig(),
+): String {
     return buildLocalDiagnosticReport(
         source = "wechat_settings",
         targetPackage = "com.tencent.mm",
+        featureConfig = featureConfig,
     )
 }
 
 internal fun showModuleDiagnosticsDialog(activity: Activity) {
-    val report = buildWeChatDiagnosticsDialogReport()
+    val report = buildWeChatDiagnosticsDialogReport(ModuleFeatureConfigStore.load(activity))
     AlertDialog.Builder(activity)
         .setTitle(WECHAT_SETTINGS_ENTRY_TITLE)
         .setMessage(report)

@@ -96,12 +96,29 @@ class ExampleUnitTest {
         assertTrue(report.contains("【功能状态】"))
         assertTrue(report.contains("模块诊断：已启用"))
         assertTrue(report.contains("微信设置入口：已启用"))
-        assertTrue(report.contains("抗更新定位：框架已就绪，暂无启用规则"))
+        assertTrue(report.contains("抗更新定位：未启用（框架已就绪，暂无启用规则）"))
         assertTrue(report.contains("用户数据读取：未启用"))
         assertTrue(report.contains("【验证】"))
         assertFalse(report.contains("聊天"))
         assertFalse(report.contains("联系人"))
         assertFalse(report.contains("消息正文"))
+    }
+
+    @Test
+    fun localDiagnosticReportShowsFeatureConfigState() {
+        val report = buildLocalDiagnosticReport(
+            featureConfig = ModuleFeatureConfig(
+                diagnosticsEnabled = true,
+                settingsEntryEnabled = false,
+                antiUpdateResolutionEnabled = true,
+                userDataReadEnabled = false,
+            ),
+        )
+
+        assertTrue(report.contains("模块诊断：已启用"))
+        assertTrue(report.contains("微信设置入口：未启用"))
+        assertTrue(report.contains("抗更新定位：已启用"))
+        assertTrue(report.contains("用户数据读取：未启用"))
     }
 
     @Test
