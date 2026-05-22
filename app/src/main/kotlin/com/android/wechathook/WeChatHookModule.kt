@@ -104,6 +104,16 @@ class WeChatHookModule : XposedModule() {
         )
         if (!isMainProcess) return
 
+        installLegacyWeChatSettingsEntry(
+            module = this,
+            classLoader = param.defaultClassLoader,
+            log = ::log,
+        )
+        installModernWeChatSettingsEntry(
+            module = this,
+            classLoader = param.defaultClassLoader,
+            log = ::log,
+        )
         installApplicationOnCreateDiagnosticHook(param.packageName)
         val fingerprint = buildVersionFingerprint(
             packageName = param.packageName,
