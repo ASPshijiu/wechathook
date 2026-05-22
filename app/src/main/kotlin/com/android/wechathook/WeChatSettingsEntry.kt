@@ -1,6 +1,9 @@
 package com.android.wechathook
 
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -48,6 +51,26 @@ internal fun openModuleDiagnostics(context: Context) {
     context.startActivity(buildModuleDiagnosticsIntent())
 }
 
+internal fun buildWeChatDiagnosticsDialogReport(): String {
+    return buildLocalDiagnosticReport(
+        source = "wechat_settings",
+        targetPackage = "com.tencent.mm",
+    )
+}
+
+internal fun showModuleDiagnosticsDialog(activity: Activity) {
+    val report = buildWeChatDiagnosticsDialogReport()
+    AlertDialog.Builder(activity)
+        .setTitle(WECHAT_SETTINGS_ENTRY_TITLE)
+        .setMessage(report)
+        .setPositiveButton("复制") { _, _ ->
+            val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("WeChat Hook Diagnostics", report))
+        }
+        .setNegativeButton("关闭", null)
+        .show()
+}
+
 internal fun installModernWeChatSettingsEntry(
     module: XposedInterface,
     classLoader: ClassLoader,
@@ -81,7 +104,7 @@ internal fun installModernWeChatSettingsEntry(
 
 private fun addModernSettingsMenuEntry(activity: Activity): Boolean {
     val listener = MenuItem.OnMenuItemClickListener {
-        openModuleDiagnostics(activity)
+        showModuleDiagnosticsDialog(activity)
         true
     }
     val title = WECHAT_SETTINGS_ENTRY_TITLE
@@ -208,7 +231,7 @@ internal fun installLegacyWeChatSettingsEntry(
                 return@intercept chain.proceed()
             }
             val activity = chain.getThisObject() as? Activity ?: return@intercept true
-            openModuleDiagnostics(activity)
+            showModuleDiagnosticsDialog(activity)
             true
         }
 

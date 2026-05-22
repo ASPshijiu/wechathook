@@ -31,6 +31,15 @@ class WeChatSettingsEntryTest {
     }
 
     @Test
+    fun weChatDiagnosticsDialogReportUsesChineseEntryState() {
+        val report = buildWeChatDiagnosticsDialogReport()
+
+        assertTrue(report.contains("WeChat Hook 诊断"))
+        assertTrue(report.contains("打开来源：微信设置"))
+        assertTrue(report.contains("设置入口：已从微信设置打开"))
+    }
+
+    @Test
     fun settingsEntryTitleContainsNoSensitiveContent() {
         assertFalse(WECHAT_SETTINGS_ENTRY_TITLE.contains("聊天"))
         assertFalse(WECHAT_SETTINGS_ENTRY_TITLE.contains("联系人"))
