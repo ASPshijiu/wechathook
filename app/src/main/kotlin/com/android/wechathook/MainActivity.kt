@@ -22,7 +22,7 @@ class MainActivity : Activity() {
             text = report
             textSize = 14f
             setTextIsSelectable(true)
-            setPadding(32, 32, 32, 32)
+            setPadding(32, 24, 32, 32)
         }
         val copyButton = Button(this).apply {
             text = getString(R.string.copy_diagnostics)
@@ -50,15 +50,37 @@ internal fun buildLocalDiagnosticReport(
     source: String = "",
     targetPackage: String = "",
 ): String {
+    val normalizedSource = source.ifEmpty { "launcher" }
+    val normalizedTargetPackage = targetPackage.ifEmpty { "com.tencent.mm" }
     return buildString {
         appendLine("WeChat Hook Diagnostics")
+        appendLine()
+        appendLine("[Module]")
         appendLine("modulePackage=com.android.wechathook")
         appendLine("moduleVersion=1.0")
-        appendLine("targetPackage=${targetPackage.ifEmpty { "com.tencent.mm" }}")
-        appendLine("entrySource=${source.ifEmpty { "launcher" }}")
+        appendLine("entrySource=$normalizedSource")
+        appendLine()
+        appendLine("[Target]")
+        appendLine("targetPackage=$normalizedTargetPackage")
         appendLine("scope=com.tencent.mm")
-        appendLine("status=Open WeChat and check LSPosed logs for ModuleDiagnostics")
         appendLine("expectedMainProcess=com.tencent.mm")
-        appendLine("expectedInternalHook=com.tencent.mm.app.Application#attachBaseContext(android.content.Context)")
+        appendLine()
+        appendLine("[Hooks]")
+        appendLine("startupHook=android.app.Application#onCreate")
+        appendLine("internalHook=com.tencent.mm.app.Application#attachBaseContext(android.content.Context)")
+        appendLine("settingsEntry=MainSettingsUI top option menu")
+        appendLine()
+        appendLine("[Verification]")
+        appendLine("moduleEnabled=Check LSPosed scope for com.tencent.mm")
+        appendLine("runtimeStatus=Check LSPosed logs for ModuleDiagnostics")
+        appendLine("settingsEntryStatus=${buildSettingsEntryStatus(normalizedSource)}")
     }.trimEnd()
+}
+
+private fun buildSettingsEntryStatus(source: String): String {
+    return if (source == "wechat_settings") {
+        "openedFromWeChatSettings"
+    } else {
+        "open WeChat > Me > Settings > WeChat Hook Diagnostics"
+    }
 }
