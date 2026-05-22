@@ -12,6 +12,7 @@ import com.android.wechathook.antiupdate.HookResolver
 import com.android.wechathook.antiupdate.MemoryHookCache
 import com.android.wechathook.antiupdate.VersionFingerprint
 import com.android.wechathook.antiupdate.VersionFingerprintProvider
+import io.github.libxposed.api.XposedInterface.ExceptionMode
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageLoadedParam
@@ -25,6 +26,14 @@ internal fun buildStartupDiagnosticMessage(
     hookCount: Int,
 ): String {
     return "StartupDiagnostic(packageName=$packageName, isFirstPackage=$isFirstPackage, hookCount=$hookCount, antiUpdateEnabled=${hookCount > 0})"
+}
+
+internal fun buildFirstHookDiagnosticMessage(
+    target: String,
+    packageName: String,
+    triggered: Boolean,
+): String {
+    return "FirstHookDiagnostic(target=$target, packageName=$packageName, triggered=$triggered)"
 }
 
 internal fun buildVersionFingerprint(
@@ -71,9 +80,30 @@ class WeChatHookModule : XposedModule() {
                 hookCount = FIRST_STAGE_HOOKS.size,
             ),
         )
+        installApplicationOnCreateDiagnosticHook(param.packageName)
         if (!shouldRunAntiUpdateResolution(FIRST_STAGE_HOOKS)) return
 
         runAntiUpdateResolution(param)
+    }
+
+    private fun installApplicationOnCreateDiagnosticHook(packageName: String) {
+        val onCreate = Application::class.java.getDeclaredMethod("onCreate")
+        hook(onCreate)
+            .setExceptionMode(ExceptionMode.PROTECTIVE)
+            .intercept { chain ->
+                val result = chain.proceed()
+                log(
+                    Log.INFO,
+                    TAG,
+                    buildFirstHookDiagnosticMessage(
+                        target = APPLICATION_ON_CREATE_TARGET,
+                        packageName = packageName,
+                        triggered = true,
+                    ),
+                )
+                result
+            }
+        log(Log.INFO, TAG, "First hook installed: $APPLICATION_ON_CREATE_TARGET")
     }
 
     private fun runAntiUpdateResolution(param: PackageLoadedParam) {
@@ -119,6 +149,7 @@ class WeChatHookModule : XposedModule() {
     companion object {
         private const val TAG = "WeChatHook"
         private const val WECHAT_PACKAGE_NAME = "com.tencent.mm"
+        private const val APPLICATION_ON_CREATE_TARGET = "android.app.Application#onCreate"
         private val FIRST_STAGE_HOOKS = emptyList<HookDefinition>()
     }
 }
